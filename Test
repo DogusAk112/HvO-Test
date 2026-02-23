@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🚑 HvO Status</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel: rgba(15,23,42,.78);
+      --panel2: rgba(30,41,59,.55);
+      --border: rgba(148,163,184,.18);
+      --text:#f1f5f9;
+      --muted:#94a3b8;
+
+      --ok:#22c55e;
+      --bad:#ef4444;
+      --info:#3b82f6;
+      --warn:#f59e0b;
+
+      --shadow: 0 16px 46px rgba(0,0,0,.35);
+      --r16:16px;
+      --r20:20px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(59,130,246,.16), transparent 55%),
+                  radial-gradient(900px 500px at 90% 20%, rgba(34,197,94,.10), transparent 50%),
+                  var(--bg);
+      color:var(--text);
+      padding:14px;
+      padding-bottom: 92px;
+    }
+    .wrap{max-width:980px;margin:0 auto}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .spacer{flex:1}
+    .muted{color:var(--muted);font-weight:650}
+    h1{margin:0;font-size:22px;font-weight:950;letter-spacing:.2px}
+
+    .card{
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: var(--r20);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .hero{
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--r20);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.22);
+      background: rgba(15,23,42,.55);
+      font-size:12.5px;
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .pill.ok{border-color: rgba(34,197,94,.35)}
+    .pill.bad{border-color: rgba(239,68,68,.40)}
+    .pill.info{border-color: rgba(59,130,246,.40)}
+    .pill.warn{border-color: rgba(245,158,11,.40)}
+    .pill.muted{color:var(--muted);font-weight:850}
+
+    select,button{
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,.20);
+      background: rgba(15,23,42,.75);
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    button{cursor:pointer;font-weight:950}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .btn.primary{background: rgba(59,130,246,.95); border-color: rgba(59,130,246,.95)}
+    .btn.green{background: rgba(34,197,94,.95); border-color: rgba(34,197,94,.95); color:#06240f}
+    .btn.red{background: rgba(239,68,68,.95); border-color: rgba(239,68,68,.95)}
+    .btn.ghost{background: rgba(15,23,42,.45)}
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+    @media(max-width:860px){ .grid{grid-template-columns:1fr} }
+
+    .pickupBox{
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: var(--r16);
+      border:1px solid rgba(34,197,94,.28);
+      background: rgba(34,197,94,.08);
+    }
+    .pickupBox.none{
+      border-color: rgba(245,158,11,.35);
+      background: rgba(245,158,11,.09);
+    }
+    .pickupBox .label{font-weight:950;letter-spacing:.2px}
+    .pickupBox .names{
+      margin-top: 6px;
+      font-size: 22px;
+      line-height: 1.2;
+      font-weight: 980;
+      word-break: break-word;
+    }
+
+    .kv{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(148,163,184,.18)}
+    .kv:last-child{border-bottom:none}
+    .kv .k{color:var(--muted);font-weight:850}
+    .kv .v{font-weight:950}
+
+    .listHead{
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      justify-content:space-between;
+      margin-bottom: 8px;
+    }
+    .seg{
+      display:inline-flex;
+      border:1px solid rgba(148,163,184,.20);
+      border-radius: 999px;
+      overflow:hidden;
+      background: rgba(15,23,42,.45);
+    }
+    .seg button{
+      border:none;background:transparent;
+      padding: 8px 12px;
+      font-weight:950;
+    }
+    .seg button.active{background: rgba(59,130,246,.92)}
+
+    .item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 12px;
+      border-radius: var(--r16);
+      border:1px solid rgba(148,163,184,.14);
+      background: rgba(15,23,42,.70);
+      margin-top: 8px;
+    }
+    .left{
+      display:flex;flex-direction:column;gap:6px;min-width: 260px;
+    }
+    .name{font-weight:980;letter-spacing:.2px}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 90px;
+      z-index: 50;
+      display:none;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border:1px solid rgba(148,163,184,.25);
+      background: rgba(15,23,42,.92);
+      box-shadow: var(--shadow);
+      font-weight: 950;
+      max-width: calc(100% - 20px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .toast.ok{border-color: rgba(34,197,94,.45)}
+    .toast.err{border-color: rgba(239,68,68,.55)}
+
+    .footer{
+      position: fixed;
+      left: 10px; right: 10px; bottom: 10px;
+      z-index: 40;
+      border-radius: 18px;
+      border:1px solid rgba(148,163,184,.22);
+      background: rgba(15,23,42,.88);
+      box-shadow: var(--shadow);
+      padding: 10px 12px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="row">
+        <span class="pill info">HvO</span>
+        <h1>HvO Status</h1>
+      </div>
+
+      <div class="row">
+        <span class="pill muted">Ich bin:</span>
+        <select id="meSelect"></select>
+        <button id="clearMe" class="btn ghost">Zurücksetzen</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <div class="muted" id="hint">Wähle oben deinen Namen.</div>
+      <div class="spacer"></div>
+      <span class="pill muted" id="geoPill">📍 Geo: aus</span>
+      <button id="geoBtn" class="btn ghost" disabled>📍 Standort aktualisieren</button>
+    </div>
+
+    <!--
+      OPTIONAL DB-Änderung (nur wenn du speichern willst):
+      ALTER TABLE public.helpers ADD COLUMN IF NOT EXISTS location_status text;
+      (Werte: 'ort' | 'rand' | 'ausserhalb')
+      Die App speichert NUR die Kategorie, keine Koordinaten.
+    -->
+  </div>
+
+  <!-- Dashboard -->
+  <div class="grid">
+
+    <!-- Left -->
+    <div class="hero">
+      <div class="row">
+        <span class="pill info">🚗 Fahrer</span>
+        <span class="pill" id="driverPill">—</span>
+        <div class="spacer"></div>
+        <span class="pill muted" id="livePill">Live</span>
+      </div>
+
+      <div id="pickupBox" class="pickupBox">
+        <div class="label">👤 ABZUHOLEN (verfügbar & ohne Fahrzeug)</div>
+        <div class="names" id="pickupNames">—</div>
+      </div>
+    </div>
+
+    <!-- Right: my actions -->
+    <div class="hero">
+      <div class="row" style="justify-content:space-between">
+        <span class="pill">👤 Du</span>
+        <span id="mePill" class="pill muted">—</span>
+      </div>
+
+      <div class="kv">
+        <div class="k">Status</div>
+        <div class="v" id="meStatus">—</div>
+      </div>
+      <div class="kv">
+        <div class="k">Fahrzeug</div>
+        <div class="v" id="meVehicle">—</div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button id="toggleAvail" class="btn green" disabled>Verfügbar</button>
+
+        <!-- Beide Buttons existieren, JS schaltet Sichtbarkeit -->
+        <button id="takeVehicle" class="btn primary" disabled>Fahrzeug übernehmen</button>
+        <button id="dropVehicle" class="btn red" disabled>Fahrzeug abgeben</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        Geo speichert nur <b>Ort / Rand / Außerhalb</b> (keine Koordinaten).
+      </div>
+    </div>
+
+  </div>
+
+  <!-- List -->
+  <div class="card">
+    <div class="listHead">
+      <div class="row">
+        <span class="pill">Team</span>
+        <span class="pill muted" id="countPill">—</span>
+      </div>
+
+      <div class="seg">
+        <button id="fAll" class="active">Alle</button>
+        <button id="fAvail">Verfügbar</button>
+        <button id="fPickup">Abzuholen</button>
+      </div>
+    </div>
+
+    <div id="list"></div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Footer -->
+<div class="footer">
+  <div class="row">
+    <span class="pill muted">📍 Königsbronn</span>
+    <span class="pill muted">🗓 <span id="dateText">—</span></span>
+    <span class="pill muted">🕒 <span id="timeText">—</span></span>
+  </div>
+  <span class="pill" id="weatherText">⛅ Wetter lädt…</span>
+</div>
+
+<script>
+  // ===== Supabase =====
+  const supabaseUrl = "https://yesbojjwzobfmlggjgbx.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllc2Jvamp3em9iZm1sZ2dqZ2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NjU3NjMsImV4cCI6MjA4NzM0MTc2M30.43MTXrmQe09fVA9sQXZuDqBZHSZ01Ts6J2SkuI4PBzw";
+  const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  // ===== Storage =====
+  const LS_ID="hvo_me_helper_id";
+  const getMeId=()=>localStorage.getItem(LS_ID)||"";
+  const setMeId=(v)=>v?localStorage.setItem(LS_ID,v):localStorage.removeItem(LS_ID);
+
+  // ===== DOM =====
+  const meSelect = document.getElementById("meSelect");
+  const clearMe = document.getElementById("clearMe");
+  const hint = document.getElementById("hint");
+
+  const driverPill = document.getElementById("driverPill");
+  const pickupBox = document.getElementById("pickupBox");
+  const pickupNames = document.getElementById("pickupNames");
+
+  const mePill = document.getElementById("mePill");
+  const meStatus = document.getElementById("meStatus");
+  const meVehicle = document.getElementById("meVehicle");
+
+  const toggleAvail = document.getElementById("toggleAvail");
+  const takeVehicle = document.getElementById("takeVehicle");
+  const dropVehicle = document.getElementById("dropVehicle");
+
+  const list = document.getElementById("list");
+  const countPill = document.getElementById("countPill");
+
+  const fAll = document.getElementById("fAll");
+  const fAvail = document.getElementById("fAvail");
+  const fPickup = document.getElementById("fPickup");
+
+  const toast = document.getElementById("toast");
+  const livePill = document.getElementById("livePill");
+
+  const dateText = document.getElementById("dateText");
+  const timeText = document.getElementById("timeText");
+  const weatherText = document.getElementById("weatherText");
+
+  const geoPill = document.getElementById("geoPill");
+  const geoBtn = document.getElementById("geoBtn");
+
+  // ===== State =====
+  let current = [];
+  let loading = false;
+  let realtime = false;
+  let filter = "all"; // all | avail | pickup
+  let geoTimer = null;
+
+  // ===== UI helpers =====
+  function showToast(msg,type="ok"){
+    toast.textContent = msg;
+    toast.className = "toast " + (type==="err" ? "err":"ok");
+    toast.style.display="block";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>toast.style.display="none", 1700);
+  }
+  function setFilterUI(v){
+    fAll.classList.toggle("active", v==="all");
+    fAvail.classList.toggle("active", v==="avail");
+    fPickup.classList.toggle("active", v==="pickup");
+  }
+
+  // ===== DB =====
+  async function fetchHelpers(){
+    const { data, error } = await sb.from("helpers").select("*").order("name",{ascending:true});
+    if(error) throw error;
+    return data||[];
+  }
+
+  async function updateHelper(id, patch){
+    const { error } = await sb.from("helpers").update(patch).eq("id", id);
+    if(error) throw error;
+  }
+
+  // Vehicle owner switch (fallback 2 updates, beide mit WHERE)
+  async function setVehicleOwner(helperId){
+    const { error: e1 } = await sb.from("helpers")
+      .update({ has_vehicle: false })
+      .eq("has_vehicle", true);
+    if(e1) throw e1;
+
+    const { error: e2 } = await sb.from("helpers")
+      .update({ has_vehicle: true })
+      .eq("id", helperId);
+    if(e2) throw e2;
+  }
+
+  // ===== GEO: nur Kategorie speichern (keine Koordinaten) =====
+  const KB = { lat: 48.742, lon: 10.101 }; // Königsbronn (grob)
+  const GEO_THRESHOLDS_KM = { ort: 3, rand: 10 }; // <=3 Ort, <=10 Rand, sonst außerhalb
+
+  function haversineKm(lat1, lon1, lat2, lon2){
+    const R = 6371;
+    const toRad = (x) => x * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat/2)**2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  function classifyLocation(distanceKm){
+    if(distanceKm <= GEO_THRESHOLDS_KM.ort) return "ort";
+    if(distanceKm <= GEO_THRESHOLDS_KM.rand) return "rand";
+    return "ausserhalb";
+  }
+
+  function geoLabel(code){
+    if(code === "ort") return "Ort";
+    if(code === "rand") return "Rand";
+    if(code === "ausserhalb") return "Außerhalb";
+    return "—";
+  }
+
+  function geoPillState(text, kind="muted"){
+    geoPill.textContent = text;
+    geoPill.className = "pill " + kind;
+  }
+
+  function getGeo(){
+    return new Promise((resolve, reject) => {
+      if(!("geolocation" in navigator)){
+        reject(new Error("Geolocation nicht verfügbar"));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false,
+        timeout: 12000,
+        maximumAge: 120000
+      });
+    });
+  }
+
+  async function updateGeoForMe(){
+    const meId = getMeId();
+    if(!meId) return;
+
+    geoPillState("📍 Geo: wird ermittelt…", "muted");
+
+    try{
+      const pos = await getGeo();
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      const km = haversineKm(lat, lon, KB.lat, KB.lon);
+      const cat = classifyLocation(km);
+
+      // UI sofort
+      geoPillState(`📍 ${geoLabel(cat)} (${Math.round(km)} km)`, cat==="ort" ? "ok" : (cat==="rand" ? "warn" : "bad"));
+
+      // DB: nur Kategorie speichern (wenn Spalte existiert).
+      // Wenn location_status nicht existiert -> catch zeigt Hinweis.
+      try{
+        await updateHelper(meId, { location_status: cat });
+      }catch(e){
+        // Falls Column fehlt: nicht hart failen – App läuft weiter
+        console.warn("location_status update failed:", e);
+        showToast("Hinweis: DB-Spalte location_status fehlt", "err");
+      }
+
+      await load(); // damit Liste/Team aktualisiert
+    }catch(e){
+      console.error(e);
+      if(e.code === 1){
+        geoPillState("📍 Geo: blockiert", "warn");
+        showToast("Standort wurde nicht erlaubt", "err");
+      } else {
+        geoPillState("📍 Geo: Fehler", "warn");
+        showToast(e.message || String(e), "err");
+      }
+    }
+  }
+
+  function startGeoAuto(){
+    // alle 5 Minuten neu (battery-friendly)
+    if(geoTimer) clearInterval(geoTimer);
+    geoTimer = setInterval(updateGeoForMe, 5 * 60 * 1000);
+  }
+
+  // ===== Render =====
+  function renderMeSelect(){
+    const meId = getMeId();
+    meSelect.innerHTML = `<option value="">— auswählen —</option>` + current.map(h =>
+      `<option value="${h.id}" ${h.id===meId ? "selected":""}>${h.name}</option>`
+    ).join("");
+
+    hint.textContent = meId ? "Änderungen sind nur bei deinem Namen aktiv." : "Wähle oben deinen Namen.";
+    toggleAvail.disabled = !meId;
+    takeVehicle.disabled = !meId;
+    dropVehicle.disabled = !meId;
+    geoBtn.disabled = !meId;
+
+    meSelect.onchange = async () => {
+      setMeId(meSelect.value || "");
+      showToast(meSelect.value ? "Auswahl gespeichert ✅" : "Auswahl zurückgesetzt");
+      // Geo-Pill zurücksetzen, bis neu bestimmt
+      if(getMeId()){
+        geoPillState("📍 Geo: bereit", "muted");
+        // einmal direkt versuchen (User kann erlauben)
+        updateGeoForMe();
+        startGeoAuto();
+      } else {
+        geoPillState("📍 Geo: aus", "muted");
+      }
+      await load();
+    };
+
+    clearMe.onclick = async () => {
+      setMeId("");
+      meSelect.value = "";
+      showToast("Auswahl zurückgesetzt");
+      geoPillState("📍 Geo: aus", "muted");
+      if(geoTimer) clearInterval(geoTimer);
+      await load();
+    };
+
+    geoBtn.onclick = updateGeoForMe;
+  }
+
+  function renderDashboard(){
+    const driver = current.find(x => x.has_vehicle);
+    driverPill.textContent = driver ? driver.name : "Keiner";
+
+    // FIX: Wenn kein Fahrer gesetzt ist, nicht "abzuholen" anzeigen
+    if(!driver){
+      pickupBox.classList.add("none");
+      pickupNames.textContent = "⚠️ Kein Fahrer gesetzt – bitte Fahrzeug übernehmen.";
+    } else {
+      const pickup = current.filter(x => x.is_available && !x.has_vehicle);
+      if(pickup.length){
+        pickupBox.classList.remove("none");
+        pickupNames.textContent = pickup.map(x => x.name).join(", ");
+      } else {
+        pickupBox.classList.add("none");
+        pickupNames.textContent = "Niemand";
+      }
+    }
+
+    const meId = getMeId();
+    const me = current.find(x=>x.id===meId);
+
+    if(!me){
+      mePill.textContent = "—";
+      mePill.className = "pill muted";
+      meStatus.textContent = "—";
+      meVehicle.textContent = "—";
+      toggleAvail.textContent = "Verfügbar";
+      toggleAvail.className = "btn green";
+
+      // default (hidden by state anyway)
+      takeVehicle.style.display = "inline-block";
+      dropVehicle.style.display = "inline-block";
+      return;
+    }
+
+    const avail = !!me.is_available;
+    mePill.textContent = `Du: ${me.name}`;
+    mePill.className = "pill info";
+
+    meStatus.textContent = avail ? "🟢 Verfügbar" : "🔴 Nicht verfügbar";
+
+    toggleAvail.textContent = avail ? "Nicht verfügbar" : "Verfügbar";
+    toggleAvail.className = "btn " + (avail ? "red" : "green");
+
+    // ✅ Fahrzeug-Buttons dynamisch umschalten
+    if(me.has_vehicle){
+      meVehicle.textContent = "🚗 Du hast das Fahrzeug";
+      takeVehicle.style.display = "none";
+      dropVehicle.style.display = "inline-block";
+    } else {
+      meVehicle.textContent = "—";
+      takeVehicle.style.display = "inline-block";
+      dropVehicle.style.display = "none";
+    }
+  }
+
+  function renderList(){
+    let items = [...current];
+
+    if(filter === "avail") items = items.filter(x => x.is_available);
+    if(filter === "pickup") items = items.filter(x => x.is_available && !x.has_vehicle);
+
+    // Sort: driver first, then available, then name
+    items.sort((a,b)=>{
+      if(a.has_vehicle !== b.has_vehicle) return a.has_vehicle ? -1 : 1;
+      if(a.is_available !== b.is_available) return a.is_available ? -1 : 1;
+      return (a.name||"").localeCompare(b.name||"");
+    });
+
+    countPill.textContent = `${items.length} angezeigt`;
+
+    const meId = getMeId();
+    list.innerHTML = "";
+
+    for(const h of items){
+      const el = document.createElement("div");
+      el.className = "item";
+
+      const left = document.createElement("div");
+      left.className = "left";
+
+      const nm = document.createElement("div");
+      nm.className = "name";
+      nm.textContent = h.name;
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const s = document.createElement("span");
+      s.className = "pill " + (h.is_available ? "ok" : "bad");
+      s.textContent = h.is_available ? "🟢 Verfügbar" : "🔴 Nicht";
+      meta.appendChild(s);
+
+      if(h.has_vehicle){
+        const v = document.createElement("span");
+        v.className = "pill info";
+        v.textContent = "🚗 Fahrzeug";
+        meta.appendChild(v);
+      }
+
+      // Geo-Kategorie anzeigen, wenn DB-Feld existiert (location_status)
+      if(h.location_status){
+        const g = document.createElement("span");
+        const kind = h.location_status === "ort" ? "ok" : (h.location_status === "rand" ? "warn" : "bad");
+        g.className = "pill " + kind;
+        g.textContent = `📍 ${geoLabel(h.location_status)}`;
+        meta.appendChild(g);
+      }
+
+      if(h.id === meId){
+        const my = document.createElement("span");
+        my.className = "pill muted";
+        my.textContent = "Du";
+        meta.appendChild(my);
+      }
+
+      left.appendChild(nm);
+      left.appendChild(meta);
+
+      el.appendChild(left);
+      el.appendChild(document.createElement("div")); // right empty
+      list.appendChild(el);
+    }
+  }
+
+  async function load(){
+    if(loading) return;
+    loading = true;
+    try{
+      current = await fetchHelpers();
+      renderMeSelect();
+      renderDashboard();
+      renderList();
+
+      if(!realtime){
+        realtime = true;
+        sb.channel("helpers-live")
+          .on("postgres_changes",{event:"*",schema:"public",table:"helpers"}, async () => {
+            livePill.textContent = "Live · Update";
+            clearTimeout(livePill._t);
+            livePill._t = setTimeout(()=>livePill.textContent="Live", 800);
+            await load();
+          })
+          .subscribe();
+      }
+    }catch(e){
+      console.error(e);
+      showToast(e.message || String(e), "err");
+    }finally{
+      loading = false;
+    }
+  }
+
+  // ===== Actions =====
+  toggleAvail.onclick = async () => {
+    const meId = getMeId();
+    if(!meId) return;
+    toggleAvail.disabled = true;
+    try{
+      const me = current.find(x=>x.id===meId);
+      const next = !me?.is_available;
+      await updateHelper(meId, { is_available: next });
+      showToast("Status gespeichert ✅");
+      await load();
+    }catch(e){
+      console.error(e);
+      showToast(e.message || String(e), "err");
+    }finally{
+      toggleAvail.disabled = false;
+    }
+  };
+
+  takeVehicle.onclick = async () => {
+    const meId = getMeId();
+    if(!meId) return;
+    takeVehicle.disabled = true;
+    try{
+      await setVehicleOwner(meId);
+      showToast("Fahrzeug übernommen ✅");
+      await load();
+    }catch(e){
+      console.error(e);
+      showToast(e.message || String(e), "err");
+    }finally{
+      takeVehicle.disabled = false;
+    }
+  };
+
+  dropVehicle.onclick = async () => {
+    const meId = getMeId();
+    if(!meId) return;
+    dropVehicle.disabled = true;
+    try{
+      await updateHelper(meId, { has_vehicle: false });
+      showToast("Fahrzeug abgegeben ✅");
+      await load();
+    }catch(e){
+      console.error(e);
+      showToast(e.message || String(e), "err");
+    }finally{
+      dropVehicle.disabled = false;
+    }
+  };
+
+  // Filters
+  fAll.onclick = ()=>{ filter="all"; setFilterUI("all"); renderList(); };
+  fAvail.onclick = ()=>{ filter="avail"; setFilterUI("avail"); renderList(); };
+  fPickup.onclick = ()=>{ filter="pickup"; setFilterUI("pickup"); renderList(); };
+
+  // ===== Time/Date =====
+  function updateClock(){
+    const now = new Date();
+    dateText.textContent = new Intl.DateTimeFormat("de-DE",{
+      timeZone:"Europe/Berlin", weekday:"short", year:"numeric", month:"2-digit", day:"2-digit"
+    }).format(now);
+    timeText.textContent = new Intl.DateTimeFormat("de-DE",{
+      timeZone:"Europe/Berlin", hour:"2-digit", minute:"2-digit", second:"2-digit"
+    }).format(now);
+  }
+
+  // ===== Weather Königsbronn fixed coords =====
+  async function loadWeather(){
+    try{
+      const lat=48.742, lon=10.101;
+      const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Europe%2FBerlin`;
+      const res=await fetch(url);
+      const wx=await res.json();
+      const cw=wx?.current_weather;
+      if(!cw) throw new Error("No weather");
+
+      const code=cw.weathercode;
+      const temp=Math.round(cw.temperature);
+      const wind=Math.round(cw.windspeed);
+
+      const map={
+        0:"Klar",1:"Überwiegend klar",2:"Teilweise bewölkt",3:"Bewölkt",
+        45:"Nebel",48:"Reif-Nebel",
+        51:"Niesel",53:"Niesel",55:"Niesel",
+        61:"Regen",63:"Regen",65:"Regen",
+        71:"Schnee",73:"Schnee",75:"Schnee",
+        80:"Schauer",81:"Schauer",82:"Starker Schauer",
+        95:"Gewitter",96:"Gewitter",99:"Gewitter"
+      };
+      const icon=(c)=>{
+        if(c===0) return "☀️";
+        if([1,2].includes(c)) return "🌤️";
+        if(c===3) return "☁️";
+        if([45,48].includes(c)) return "🌫️";
+        if([51,53,55,61,63,65,80,81,82].includes(c)) return "🌧️";
+        if([71,73,75].includes(c)) return "🌨️";
+        if([95,96,99].includes(c)) return "⛈️";
+        return "⛅";
+      };
+      weatherText.textContent = `${icon(code)} ${temp}°C · ${map[code]||"—"} · Wind ${wind} km/h`;
+    }catch(e){
+      console.error(e);
+      weatherText.textContent = "⛅ Wetter nicht verfügbar";
+    }
+  }
+
+  // ===== Boot =====
+  updateClock(); setInterval(updateClock, 1000);
+  loadWeather(); setInterval(loadWeather, 15*60*1000);
+
+  setFilterUI("all");
+  geoPillState("📍 Geo: aus", "muted");
+
+  // Start
+  load().then(() => {
+    // Wenn schon ein User gewählt ist: Geo direkt versuchen + Auto starten
+    if(getMeId()){
+      geoPillState("📍 Geo: bereit", "muted");
+      updateGeoForMe();
+      startGeoAuto();
+    }
+  });
+</script>
+</body>
+</html>
