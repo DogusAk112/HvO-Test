@@ -23,6 +23,9 @@
       --shadow: 0 16px 46px rgba(0,0,0,.35);
       --r16:16px;
       --r20:20px;
+
+      /* Footer sizing (mobile-friendly) */
+      --footer-h: 72px;
     }
     *{box-sizing:border-box}
     body{
@@ -33,7 +36,8 @@
                   var(--bg);
       color:var(--text);
       padding:14px;
-      padding-bottom: 92px;
+      /* Reserve space for fixed footer + iOS safe area */
+      padding-bottom: calc(var(--footer-h) + 14px + env(safe-area-inset-bottom, 0px));
     }
     .wrap{max-width:980px;margin:0 auto}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -95,7 +99,10 @@
       gap:10px;
       margin-bottom: 10px;
     }
-    @media(max-width:860px){ .grid{grid-template-columns:1fr} }
+    @media(max-width:860px){
+      .grid{grid-template-columns:1fr}
+      h1{font-size:20px}
+    }
 
     .pickupBox{
       margin-top: 10px;
@@ -115,6 +122,9 @@
       line-height: 1.2;
       font-weight: 980;
       word-break: break-word;
+    }
+    @media(max-width:520px){
+      .pickupBox .names{font-size:18px}
     }
 
     .kv{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(148,163,184,.18)}
@@ -155,6 +165,9 @@
     .left{
       display:flex;flex-direction:column;gap:6px;min-width: 260px;
     }
+    @media(max-width:520px){
+      .left{min-width:unset}
+    }
     .name{font-weight:980;letter-spacing:.2px}
     .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
@@ -162,7 +175,7 @@
       position: fixed;
       left: 50%;
       transform: translateX(-50%);
-      bottom: 90px;
+      bottom: calc(var(--footer-h) + 14px + env(safe-area-inset-bottom, 0px));
       z-index: 50;
       display:none;
       padding: 10px 14px;
@@ -179,13 +192,15 @@
     .toast.ok{border-color: rgba(34,197,94,.45)}
     .toast.err{border-color: rgba(239,68,68,.55)}
 
+    /* ===== Footer fixed (optimized for smartphones) ===== */
     .footer{
       position: fixed;
-      left: 10px; right: 10px; bottom: 10px;
+      left: 10px; right: 10px;
+      bottom: 10px;
       z-index: 40;
       border-radius: 18px;
       border:1px solid rgba(148,163,184,.22);
-      background: rgba(15,23,42,.88);
+      background: rgba(15,23,42,.90);
       box-shadow: var(--shadow);
       padding: 10px 12px;
       display:flex;
@@ -194,6 +209,21 @@
       align-items:center;
       justify-content:space-between;
       backdrop-filter: blur(8px);
+      min-height: var(--footer-h);
+    }
+    .footer .row{gap:8px}
+
+    @media(max-width:520px){
+      :root{ --footer-h: 86px; }
+      body{ padding: 10px; padding-bottom: calc(var(--footer-h) + 10px + env(safe-area-inset-bottom, 0px)); }
+      .footer{
+        left: 0; right: 0; bottom: 0;
+        border-radius: 0;
+        padding: 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      }
+      .footer .pill{font-size:12px; padding:6px 9px}
+      .footer .row{width:100%; justify-content:space-between}
     }
   </style>
 </head>
@@ -224,7 +254,7 @@
     </div>
 
     <!--
-      OPTIONAL DB-Änderung (nur wenn du speichern willst):
+      Falls du Geo-Kategorie speichern willst:
       ALTER TABLE public.helpers ADD COLUMN IF NOT EXISTS location_status text;
       (Werte: 'ort' | 'rand' | 'ausserhalb')
       Die App speichert NUR die Kategorie, keine Koordinaten.
@@ -268,13 +298,12 @@
       <div class="row" style="margin-top:10px">
         <button id="toggleAvail" class="btn green" disabled>Verfügbar</button>
 
-        <!-- Beide Buttons existieren, JS schaltet Sichtbarkeit -->
         <button id="takeVehicle" class="btn primary" disabled>Fahrzeug übernehmen</button>
         <button id="dropVehicle" class="btn red" disabled>Fahrzeug abgeben</button>
       </div>
 
       <div class="muted" style="margin-top:10px">
-        Geo speichert nur <b>Ort / Rand / Außerhalb</b> (keine Koordinaten).
+        Regel: <b>Außerhalb</b> ⇒ automatisch <b>nicht verfügbar</b>.
       </div>
     </div>
 
@@ -384,7 +413,6 @@
     if(error) throw error;
     return data||[];
   }
-
   async function updateHelper(id, patch){
     const { error } = await sb.from("helpers").update(patch).eq("id", id);
     if(error) throw error;
@@ -417,25 +445,21 @@
       Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
     return 2 * R * Math.asin(Math.sqrt(a));
   }
-
   function classifyLocation(distanceKm){
     if(distanceKm <= GEO_THRESHOLDS_KM.ort) return "ort";
     if(distanceKm <= GEO_THRESHOLDS_KM.rand) return "rand";
     return "ausserhalb";
   }
-
   function geoLabel(code){
     if(code === "ort") return "Ort";
     if(code === "rand") return "Rand";
     if(code === "ausserhalb") return "Außerhalb";
     return "—";
   }
-
   function geoPillState(text, kind="muted"){
     geoPill.textContent = text;
     geoPill.className = "pill " + kind;
   }
-
   function getGeo(){
     return new Promise((resolve, reject) => {
       if(!("geolocation" in navigator)){
@@ -450,6 +474,7 @@
     });
   }
 
+  // ✅ Änderung: Wenn außerhalb => automatisch nicht verfügbar
   async function updateGeoForMe(){
     const meId = getMeId();
     if(!meId) return;
@@ -465,19 +490,27 @@
       const cat = classifyLocation(km);
 
       // UI sofort
-      geoPillState(`📍 ${geoLabel(cat)} (${Math.round(km)} km)`, cat==="ort" ? "ok" : (cat==="rand" ? "warn" : "bad"));
+      const kind = cat==="ort" ? "ok" : (cat==="rand" ? "warn" : "bad");
+      geoPillState(`📍 ${geoLabel(cat)} (${Math.round(km)} km)`, kind);
 
-      // DB: nur Kategorie speichern (wenn Spalte existiert).
-      // Wenn location_status nicht existiert -> catch zeigt Hinweis.
-      try{
-        await updateHelper(meId, { location_status: cat });
-      }catch(e){
-        // Falls Column fehlt: nicht hart failen – App läuft weiter
-        console.warn("location_status update failed:", e);
-        showToast("Hinweis: DB-Spalte location_status fehlt", "err");
+      // DB Patch: nur Kategorie speichern, UND wenn außerhalb => is_available=false
+      const patch = { location_status: cat };
+      if(cat === "ausserhalb"){
+        patch.is_available = false;
       }
 
-      await load(); // damit Liste/Team aktualisiert
+      try{
+        await updateHelper(meId, patch);
+      }catch(e){
+        console.warn("Geo update failed:", e);
+        showToast("Hinweis: DB-Spalte location_status fehlt oder Policy blockiert", "err");
+      }
+
+      if(cat === "ausserhalb"){
+        showToast("Außerhalb ⇒ automatisch nicht verfügbar", "ok");
+      }
+
+      await load();
     }catch(e){
       console.error(e);
       if(e.code === 1){
@@ -491,7 +524,6 @@
   }
 
   function startGeoAuto(){
-    // alle 5 Minuten neu (battery-friendly)
     if(geoTimer) clearInterval(geoTimer);
     geoTimer = setInterval(updateGeoForMe, 5 * 60 * 1000);
   }
@@ -512,15 +544,16 @@
     meSelect.onchange = async () => {
       setMeId(meSelect.value || "");
       showToast(meSelect.value ? "Auswahl gespeichert ✅" : "Auswahl zurückgesetzt");
-      // Geo-Pill zurücksetzen, bis neu bestimmt
+
       if(getMeId()){
         geoPillState("📍 Geo: bereit", "muted");
-        // einmal direkt versuchen (User kann erlauben)
         updateGeoForMe();
         startGeoAuto();
       } else {
         geoPillState("📍 Geo: aus", "muted");
+        if(geoTimer) clearInterval(geoTimer);
       }
+
       await load();
     };
 
@@ -540,7 +573,7 @@
     const driver = current.find(x => x.has_vehicle);
     driverPill.textContent = driver ? driver.name : "Keiner";
 
-    // FIX: Wenn kein Fahrer gesetzt ist, nicht "abzuholen" anzeigen
+    // Wenn kein Fahrer gesetzt ist: nicht "abzuholen" anzeigen
     if(!driver){
       pickupBox.classList.add("none");
       pickupNames.textContent = "⚠️ Kein Fahrer gesetzt – bitte Fahrzeug übernehmen.";
@@ -565,23 +598,36 @@
       meVehicle.textContent = "—";
       toggleAvail.textContent = "Verfügbar";
       toggleAvail.className = "btn green";
-
-      // default (hidden by state anyway)
       takeVehicle.style.display = "inline-block";
       dropVehicle.style.display = "inline-block";
       return;
     }
 
+    const outside = (me.location_status === "ausserhalb");
     const avail = !!me.is_available;
+
     mePill.textContent = `Du: ${me.name}`;
     mePill.className = "pill info";
 
-    meStatus.textContent = avail ? "🟢 Verfügbar" : "🔴 Nicht verfügbar";
+    // Status anzeigen (Außerhalb setzt eh is_available=false, aber UI klar)
+    if(outside){
+      meStatus.textContent = "🔴 Nicht verfügbar (Außerhalb)";
+    } else {
+      meStatus.textContent = avail ? "🟢 Verfügbar" : "🔴 Nicht verfügbar";
+    }
 
-    toggleAvail.textContent = avail ? "Nicht verfügbar" : "Verfügbar";
-    toggleAvail.className = "btn " + (avail ? "red" : "green");
+    // Status-Button sperren, wenn außerhalb
+    if(outside){
+      toggleAvail.disabled = true;
+      toggleAvail.textContent = "Außerhalb";
+      toggleAvail.className = "btn red";
+    } else {
+      toggleAvail.disabled = false;
+      toggleAvail.textContent = avail ? "Nicht verfügbar" : "Verfügbar";
+      toggleAvail.className = "btn " + (avail ? "red" : "green");
+    }
 
-    // ✅ Fahrzeug-Buttons dynamisch umschalten
+    // Fahrzeug-Buttons dynamisch umschalten
     if(me.has_vehicle){
       meVehicle.textContent = "🚗 Du hast das Fahrzeug";
       takeVehicle.style.display = "none";
@@ -599,7 +645,6 @@
     if(filter === "avail") items = items.filter(x => x.is_available);
     if(filter === "pickup") items = items.filter(x => x.is_available && !x.has_vehicle);
 
-    // Sort: driver first, then available, then name
     items.sort((a,b)=>{
       if(a.has_vehicle !== b.has_vehicle) return a.has_vehicle ? -1 : 1;
       if(a.is_available !== b.is_available) return a.is_available ? -1 : 1;
@@ -637,10 +682,9 @@
         meta.appendChild(v);
       }
 
-      // Geo-Kategorie anzeigen, wenn DB-Feld existiert (location_status)
       if(h.location_status){
-        const g = document.createElement("span");
         const kind = h.location_status === "ort" ? "ok" : (h.location_status === "rand" ? "warn" : "bad");
+        const g = document.createElement("span");
         g.className = "pill " + kind;
         g.textContent = `📍 ${geoLabel(h.location_status)}`;
         meta.appendChild(g);
@@ -657,7 +701,7 @@
       left.appendChild(meta);
 
       el.appendChild(left);
-      el.appendChild(document.createElement("div")); // right empty
+      el.appendChild(document.createElement("div"));
       list.appendChild(el);
     }
   }
@@ -694,9 +738,15 @@
   toggleAvail.onclick = async () => {
     const meId = getMeId();
     if(!meId) return;
+
+    const me = current.find(x=>x.id===meId);
+    if(me?.location_status === "ausserhalb"){
+      showToast("Außerhalb ⇒ bleibt nicht verfügbar", "err");
+      return;
+    }
+
     toggleAvail.disabled = true;
     try{
-      const me = current.find(x=>x.id===meId);
       const next = !me?.is_available;
       await updateHelper(meId, { is_available: next });
       showToast("Status gespeichert ✅");
@@ -804,9 +854,7 @@
   setFilterUI("all");
   geoPillState("📍 Geo: aus", "muted");
 
-  // Start
   load().then(() => {
-    // Wenn schon ein User gewählt ist: Geo direkt versuchen + Auto starten
     if(getMeId()){
       geoPillState("📍 Geo: bereit", "muted");
       updateGeoForMe();
