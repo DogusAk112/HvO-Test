@@ -214,8 +214,11 @@
     .footer .row{gap:8px}
 
     @media(max-width:520px){
-      :root{ --footer-h: 86px; }
-      body{ padding: 10px; padding-bottom: calc(var(--footer-h) + 10px + env(safe-area-inset-bottom, 0px)); }
+      :root{ --footer-h: 92px; }
+      body{
+        padding: 10px;
+        padding-bottom: calc(var(--footer-h) + 10px + env(safe-area-inset-bottom, 0px));
+      }
       .footer{
         left: 0; right: 0; bottom: 0;
         border-radius: 0;
@@ -254,10 +257,10 @@
     </div>
 
     <!--
-      Falls du Geo-Kategorie speichern willst:
+      DB (für Geo-Kategorie):
       ALTER TABLE public.helpers ADD COLUMN IF NOT EXISTS location_status text;
-      (Werte: 'ort' | 'rand' | 'ausserhalb')
-      Die App speichert NUR die Kategorie, keine Koordinaten.
+      Werte: 'ort' | 'rand' | 'ausserhalb'
+      Regel: außerhalb => is_available=false (automatisch)
     -->
   </div>
 
@@ -334,7 +337,7 @@
 <!-- Footer -->
 <div class="footer">
   <div class="row">
-    <span class="pill muted">📍 Königsbronn</span>
+    <span class="pill muted" id="placeText">📍 Ort: —</span>
     <span class="pill muted">🗓 <span id="dateText">—</span></span>
     <span class="pill muted">🕒 <span id="timeText">—</span></span>
   </div>
@@ -344,7 +347,7 @@
 <script>
   // ===== Supabase =====
   const supabaseUrl = "https://yesbojjwzobfmlggjgbx.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllc2Jvamp3em9iZm1sZ2dqZ2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NjU3NjMsImV4cCI6MjA4NzM0MTc2M30.43MTXrmQe09fVA9sQXZuDqBZHSZ01Ts6J2SkuI4PBzw";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInllc2Jvamp3em9iZm1sZ2dqZ2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NjU3NjMsImV4cCI6MjA4NzM0MTc2M30.43MTXrmQe09fVA9sQXZuDqBZHSZ01Ts6J2SkuI4PBzw";
   const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   // ===== Storage =====
@@ -382,6 +385,7 @@
   const dateText = document.getElementById("dateText");
   const timeText = document.getElementById("timeText");
   const weatherText = document.getElementById("weatherText");
+  const placeText = document.getElementById("placeText");
 
   const geoPill = document.getElementById("geoPill");
   const geoBtn = document.getElementById("geoBtn");
@@ -392,6 +396,7 @@
   let realtime = false;
   let filter = "all"; // all | avail | pickup
   let geoTimer = null;
+  let wxTimer = null;
 
   // ===== UI helpers =====
   function showToast(msg,type="ok"){
@@ -417,8 +422,6 @@
     const { error } = await sb.from("helpers").update(patch).eq("id", id);
     if(error) throw error;
   }
-
-  // Vehicle owner switch (fallback 2 updates, beide mit WHERE)
   async function setVehicleOwner(helperId){
     const { error: e1 } = await sb.from("helpers")
       .update({ has_vehicle: false })
@@ -431,8 +434,8 @@
     if(e2) throw e2;
   }
 
-  // ===== GEO: nur Kategorie speichern (keine Koordinaten) =====
-  const KB = { lat: 48.742, lon: 10.101 }; // Königsbronn (grob)
+  // ===== GEO: Kategorie speichern (keine Koordinaten) =====
+  const KB = { lat: 48.742, lon: 10.101 }; // fallback center
   const GEO_THRESHOLDS_KM = { ort: 3, rand: 10 }; // <=3 Ort, <=10 Rand, sonst außerhalb
 
   function haversineKm(lat1, lon1, lat2, lon2){
@@ -474,7 +477,87 @@
     });
   }
 
-  // ✅ Änderung: Wenn außerhalb => automatisch nicht verfügbar
+  // ===== Weather + Reverse Geocoding (aktueller Ort) =====
+  function wxLabel(code){
+    const map={
+      0:"Klar",1:"Überwiegend klar",2:"Teilweise bewölkt",3:"Bewölkt",
+      45:"Nebel",48:"Reif-Nebel",
+      51:"Niesel",53:"Niesel",55:"Niesel",
+      61:"Regen",63:"Regen",65:"Regen",
+      71:"Schnee",73:"Schnee",75:"Schnee",
+      80:"Schauer",81:"Schauer",82:"Starker Schauer",
+      95:"Gewitter",96:"Gewitter",99:"Gewitter"
+    };
+    return map[code] || "—";
+  }
+  function wxIcon(code){
+    if(code===0) return "☀️";
+    if([1,2].includes(code)) return "🌤️";
+    if(code===3) return "☁️";
+    if([45,48].includes(code)) return "🌫️";
+    if([51,53,55,61,63,65,80,81,82].includes(code)) return "🌧️";
+    if([71,73,75].includes(code)) return "🌨️";
+    if([95,96,99].includes(code)) return "⛈️";
+    return "⛅";
+  }
+
+  async function reversePlaceName(lat, lon){
+    try{
+      const url = `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=de&format=json`;
+      const res = await fetch(url);
+      const js = await res.json();
+      const best = js?.results?.[0];
+      if(!best) return null;
+
+      const name = best.name || best.city || best.town || best.village;
+      const admin = best.admin1 || best.state;
+      if(name && admin) return `${name}, ${admin}`;
+      return name || null;
+    }catch{
+      return null;
+    }
+  }
+
+  async function loadWeatherForCoords(lat, lon){
+    try{
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Europe%2FBerlin`;
+      const res = await fetch(url);
+      const wx = await res.json();
+      const cw = wx?.current_weather;
+      if(!cw) throw new Error("No weather");
+
+      const code = cw.weathercode;
+      const temp = Math.round(cw.temperature);
+      const wind = Math.round(cw.windspeed);
+
+      weatherText.textContent = `${wxIcon(code)} ${temp}°C · ${wxLabel(code)} · Wind ${wind} km/h`;
+
+      const place = await reversePlaceName(lat, lon);
+      placeText.textContent = place ? `📍 ${place}` : `📍 ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+    }catch(e){
+      console.error(e);
+      weatherText.textContent = "⛅ Wetter nicht verfügbar";
+      placeText.textContent = "📍 Ort: —";
+    }
+  }
+
+  // Wetter: bevorzugt Geo, sonst fallback Königsbronn
+  async function loadWeather(){
+    weatherText.textContent = "⛅ Wetter lädt…";
+    placeText.textContent = "📍 Ort: —";
+
+    if("geolocation" in navigator){
+      navigator.geolocation.getCurrentPosition(
+        (pos) => loadWeatherForCoords(pos.coords.latitude, pos.coords.longitude),
+        () => loadWeatherForCoords(KB.lat, KB.lon),
+        { enableHighAccuracy:false, timeout: 8000, maximumAge: 300000 }
+      );
+    } else {
+      loadWeatherForCoords(KB.lat, KB.lon);
+    }
+  }
+
+  // ✅ Regel: Wenn außerhalb => automatisch nicht verfügbar
   async function updateGeoForMe(){
     const meId = getMeId();
     if(!meId) return;
@@ -486,14 +569,16 @@
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
 
+      // Wetter/Ort sofort auf aktuelle Position setzen
+      await loadWeatherForCoords(lat, lon);
+
       const km = haversineKm(lat, lon, KB.lat, KB.lon);
       const cat = classifyLocation(km);
 
-      // UI sofort
       const kind = cat==="ort" ? "ok" : (cat==="rand" ? "warn" : "bad");
       geoPillState(`📍 ${geoLabel(cat)} (${Math.round(km)} km)`, kind);
 
-      // DB Patch: nur Kategorie speichern, UND wenn außerhalb => is_available=false
+      // Patch: Kategorie speichern, und wenn außerhalb => is_available=false
       const patch = { location_status: cat };
       if(cat === "ausserhalb"){
         patch.is_available = false;
@@ -528,6 +613,11 @@
     geoTimer = setInterval(updateGeoForMe, 5 * 60 * 1000);
   }
 
+  function startWeatherAuto(){
+    if(wxTimer) clearInterval(wxTimer);
+    wxTimer = setInterval(loadWeather, 15 * 60 * 1000);
+  }
+
   // ===== Render =====
   function renderMeSelect(){
     const meId = getMeId();
@@ -547,6 +637,7 @@
 
       if(getMeId()){
         geoPillState("📍 Geo: bereit", "muted");
+        // Geo holt gleichzeitig Wetter+Ort von aktuellen Koords
         updateGeoForMe();
         startGeoAuto();
       } else {
@@ -573,7 +664,6 @@
     const driver = current.find(x => x.has_vehicle);
     driverPill.textContent = driver ? driver.name : "Keiner";
 
-    // Wenn kein Fahrer gesetzt ist: nicht "abzuholen" anzeigen
     if(!driver){
       pickupBox.classList.add("none");
       pickupNames.textContent = "⚠️ Kein Fahrer gesetzt – bitte Fahrzeug übernehmen.";
@@ -609,14 +699,12 @@
     mePill.textContent = `Du: ${me.name}`;
     mePill.className = "pill info";
 
-    // Status anzeigen (Außerhalb setzt eh is_available=false, aber UI klar)
     if(outside){
       meStatus.textContent = "🔴 Nicht verfügbar (Außerhalb)";
     } else {
       meStatus.textContent = avail ? "🟢 Verfügbar" : "🔴 Nicht verfügbar";
     }
 
-    // Status-Button sperren, wenn außerhalb
     if(outside){
       toggleAvail.disabled = true;
       toggleAvail.textContent = "Außerhalb";
@@ -627,7 +715,6 @@
       toggleAvail.className = "btn " + (avail ? "red" : "green");
     }
 
-    // Fahrzeug-Buttons dynamisch umschalten
     if(me.has_vehicle){
       meVehicle.textContent = "🚗 Du hast das Fahrzeug";
       takeVehicle.style.display = "none";
@@ -807,49 +894,12 @@
     }).format(now);
   }
 
-  // ===== Weather Königsbronn fixed coords =====
-  async function loadWeather(){
-    try{
-      const lat=48.742, lon=10.101;
-      const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Europe%2FBerlin`;
-      const res=await fetch(url);
-      const wx=await res.json();
-      const cw=wx?.current_weather;
-      if(!cw) throw new Error("No weather");
-
-      const code=cw.weathercode;
-      const temp=Math.round(cw.temperature);
-      const wind=Math.round(cw.windspeed);
-
-      const map={
-        0:"Klar",1:"Überwiegend klar",2:"Teilweise bewölkt",3:"Bewölkt",
-        45:"Nebel",48:"Reif-Nebel",
-        51:"Niesel",53:"Niesel",55:"Niesel",
-        61:"Regen",63:"Regen",65:"Regen",
-        71:"Schnee",73:"Schnee",75:"Schnee",
-        80:"Schauer",81:"Schauer",82:"Starker Schauer",
-        95:"Gewitter",96:"Gewitter",99:"Gewitter"
-      };
-      const icon=(c)=>{
-        if(c===0) return "☀️";
-        if([1,2].includes(c)) return "🌤️";
-        if(c===3) return "☁️";
-        if([45,48].includes(c)) return "🌫️";
-        if([51,53,55,61,63,65,80,81,82].includes(c)) return "🌧️";
-        if([71,73,75].includes(c)) return "🌨️";
-        if([95,96,99].includes(c)) return "⛈️";
-        return "⛅";
-      };
-      weatherText.textContent = `${icon(code)} ${temp}°C · ${map[code]||"—"} · Wind ${wind} km/h`;
-    }catch(e){
-      console.error(e);
-      weatherText.textContent = "⛅ Wetter nicht verfügbar";
-    }
-  }
-
   // ===== Boot =====
   updateClock(); setInterval(updateClock, 1000);
-  loadWeather(); setInterval(loadWeather, 15*60*1000);
+
+  // Weather: initial + interval (will use geo if available, else fallback)
+  loadWeather();
+  startWeatherAuto();
 
   setFilterUI("all");
   geoPillState("📍 Geo: aus", "muted");
