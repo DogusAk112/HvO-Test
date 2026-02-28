@@ -3,17 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#0b1220">
   <title>🚑 HvO Status</title>
 
-  <!-- Supabase JS v2 (wichtig: window.supabase.createClient) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1"></script>
 
   <style>
     :root{
       --bg:#0b1220;
-      --panel: rgba(15,23,42,.78);
-      --panel2: rgba(30,41,59,.55);
+      --panel: rgba(15,23,42,.76);
+      --panel2: rgba(30,41,59,.52);
       --border: rgba(148,163,184,.18);
+      --border2: rgba(148,163,184,.12);
+
       --text:#f1f5f9;
       --muted:#94a3b8;
 
@@ -22,89 +24,104 @@
       --info:#3b82f6;
       --warn:#f59e0b;
 
-      --shadow: 0 16px 46px rgba(0,0,0,.35);
-      --r16:16px;
-      --r20:20px;
+      --shadow: 0 18px 60px rgba(0,0,0,.35);
+      --shadow2: 0 10px 30px rgba(0,0,0,.25);
+      --r18:18px;
+      --r22:22px;
 
-      --footer-h: 92px;
+      --footer-h: 132px;
+      --gap: 10px;
     }
+
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{
       margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      background: radial-gradient(1200px 600px at 20% 0%, rgba(59,130,246,.16), transparent 55%),
-                  radial-gradient(900px 500px at 90% 20%, rgba(34,197,94,.10), transparent 50%),
-                  var(--bg);
-      color:var(--text);
-      padding:12px;
-      padding-bottom: calc(var(--footer-h) + 12px + env(safe-area-inset-bottom, 0px));
+      font-family: system-ui,-apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% 0%, rgba(59,130,246,.15), transparent 55%),
+        radial-gradient(900px 500px at 90% 20%, rgba(34,197,94,.10), transparent 52%),
+        radial-gradient(700px 420px at 60% 90%, rgba(245,158,11,.08), transparent 55%),
+        var(--bg);
+      padding: 12px;
+
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(var(--footer-h) + 40px + env(safe-area-inset-bottom, 0px));
+      -webkit-tap-highlight-color: transparent;
     }
-    .wrap{max-width:980px;margin:0 auto}
+
+    .wrap{max-width: 980px;margin: 0 auto}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     .spacer{flex:1}
     .muted{color:var(--muted);font-weight:650}
-    h1{margin:0;font-size:20px;font-weight:950;letter-spacing:.2px}
+    h1{margin:0;font-size:20px;font-weight:1000;letter-spacing:.2px}
 
     .card{
       background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: var(--r20);
-      box-shadow: var(--shadow);
+      border: 1px solid var(--border2);
+      border-radius: var(--r22);
+      box-shadow: var(--shadow2);
       padding: 12px;
-      margin-bottom: 10px;
+      margin-bottom: var(--gap);
+      backdrop-filter: blur(10px);
     }
     .hero{
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: var(--r20);
+      border-radius: var(--r22);
       box-shadow: var(--shadow);
       padding: 14px;
+      backdrop-filter: blur(10px);
     }
 
     .pill{
       display:inline-flex;align-items:center;gap:8px;
       padding:6px 10px;
       border-radius:999px;
-      border:1px solid rgba(148,163,184,.22);
+      border:1px solid rgba(148,163,184,.20);
       background: rgba(15,23,42,.55);
       font-size:12.5px;
-      font-weight:900;
+      font-weight:950;
       white-space:nowrap;
     }
-    .pill.ok{border-color: rgba(34,197,94,.35)}
-    .pill.bad{border-color: rgba(239,68,68,.40)}
-    .pill.info{border-color: rgba(59,130,246,.40)}
-    .pill.warn{border-color: rgba(245,158,11,.40)}
+    .pill.ok{border-color: rgba(34,197,94,.40)}
+    .pill.bad{border-color: rgba(239,68,68,.45)}
+    .pill.info{border-color: rgba(59,130,246,.45)}
+    .pill.warn{border-color: rgba(245,158,11,.45)}
     .pill.muted{color:var(--muted);font-weight:850}
 
-    select,button{
+    select,button,input,textarea{
       border-radius: 14px;
       border: 1px solid rgba(148,163,184,.20);
-      background: rgba(15,23,42,.75);
+      background: rgba(15,23,42,.72);
       color: var(--text);
       padding: 10px 12px;
       font-size: 14px;
       outline: none;
+      min-height: 42px;
     }
-    button{cursor:pointer;font-weight:950}
+    select{min-width: 160px}
+    button{cursor:pointer;font-weight:1000}
     button:disabled{opacity:.55;cursor:not-allowed}
-    .btn.primary{background: rgba(59,130,246,.95); border-color: rgba(59,130,246,.95)}
-    .btn.green{background: rgba(34,197,94,.95); border-color: rgba(34,197,94,.95); color:#06240f}
-    .btn.red{background: rgba(239,68,68,.95); border-color: rgba(239,68,68,.95)}
-    .btn.ghost{background: rgba(15,23,42,.45)}
+
+    .btn.primary{background: rgba(59,130,246,.92); border-color: rgba(59,130,246,.92)}
+    .btn.green{background: rgba(34,197,94,.92); border-color: rgba(34,197,94,.92); color:#06240f}
+    .btn.red{background: rgba(239,68,68,.92); border-color: rgba(239,68,68,.92)}
+    .btn.ghost{background: rgba(15,23,42,.40)}
 
     .grid{
       display:grid;
       grid-template-columns: 1.1fr .9fr;
-      gap:10px;
-      margin-bottom: 10px;
+      gap: var(--gap);
+      margin-bottom: var(--gap);
     }
-    @media(max-width:860px){ .grid{grid-template-columns:1fr} }
 
     .pickupBox{
       margin-top: 10px;
       padding: 12px;
-      border-radius: var(--r16);
+      border-radius: var(--r18);
       border:1px solid rgba(34,197,94,.28);
       background: rgba(34,197,94,.08);
     }
@@ -112,19 +129,33 @@
       border-color: rgba(245,158,11,.35);
       background: rgba(245,158,11,.09);
     }
-    .pickupBox .label{font-weight:950;letter-spacing:.2px}
+    .pickupBox .label{font-weight:1000;letter-spacing:.2px}
     .pickupBox .names{
-      margin-top: 6px;
+      margin-top: 8px;
       font-size: 20px;
-      line-height: 1.2;
-      font-weight: 980;
+      line-height: 1.22;
+      font-weight: 1000;
       word-break: break-word;
     }
 
-    .kv{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed rgba(148,163,184,.18)}
+    .kv{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 0;
+      border-bottom:1px dashed rgba(148,163,184,.16);
+    }
     .kv:last-child{border-bottom:none}
-    .kv .k{color:var(--muted);font-weight:850}
-    .kv .v{font-weight:950}
+    .kv .k{color:var(--muted);font-weight:900}
+    .kv .v{font-weight:1000}
+
+    .actions{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      margin-top:12px;
+    }
+    .actions .wide{grid-column: 1 / -1}
 
     .listHead{
       display:flex;align-items:center;gap:10px;flex-wrap:wrap;
@@ -133,7 +164,7 @@
     }
     .seg{
       display:inline-flex;
-      border:1px solid rgba(148,163,184,.20);
+      border:1px solid rgba(148,163,184,.18);
       border-radius: 999px;
       overflow:hidden;
       background: rgba(15,23,42,.45);
@@ -141,9 +172,14 @@
     .seg button{
       border:none;background:transparent;
       padding: 8px 12px;
-      font-weight:950;
+      font-weight:1000;
+      min-height: 38px;
     }
-    .seg button.active{background: rgba(59,130,246,.92)}
+    .seg button.active{background: rgba(59,130,246,.88)}
+
+    #list{
+      padding-bottom: calc(var(--footer-h) + 40px + env(safe-area-inset-bottom, 0px));
+    }
 
     .item{
       display:flex;
@@ -151,28 +187,40 @@
       justify-content:space-between;
       gap:10px;
       padding: 12px;
-      border-radius: var(--r16);
-      border:1px solid rgba(148,163,184,.14);
+      border-radius: var(--r18);
+      border:1px solid rgba(148,163,184,.12);
       background: rgba(15,23,42,.70);
       margin-top: 8px;
+      scroll-margin-bottom: calc(var(--footer-h) + 30px);
     }
-    .left{display:flex;flex-direction:column;gap:6px}
-    .name{font-weight:980;letter-spacing:.2px}
+    .left{display:flex;flex-direction:column;gap:7px;min-width: 220px}
+    .name{font-weight:1000;letter-spacing:.2px}
     .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    .dangerBox{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius: var(--r18);
+      border:1px solid rgba(239,68,68,.35);
+      background: rgba(239,68,68,.09);
+    }
+    .dangerBox .t{font-weight:1000}
+    .dangerBox .d{margin-top:6px;color:rgba(241,245,249,.92);font-size:13px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
 
     .toast{
       position: fixed;
       left: 50%;
       transform: translateX(-50%);
       bottom: calc(var(--footer-h) + 12px + env(safe-area-inset-bottom, 0px));
-      z-index: 50;
+      z-index: 60;
       display:none;
       padding: 10px 14px;
       border-radius: 999px;
       border:1px solid rgba(148,163,184,.25);
       background: rgba(15,23,42,.92);
-      box-shadow: var(--shadow);
-      font-weight: 950;
+      box-shadow: var(--shadow2);
+      font-weight: 1000;
       max-width: calc(100% - 20px);
       white-space: nowrap;
       overflow: hidden;
@@ -185,9 +233,9 @@
       position: fixed;
       left: 0; right: 0; bottom: 0;
       z-index: 40;
-      border-top:1px solid rgba(148,163,184,.22);
-      background: rgba(15,23,42,.90);
-      box-shadow: 0 -16px 46px rgba(0,0,0,.35);
+      border-top:1px solid rgba(148,163,184,.20);
+      background: rgba(15,23,42,.92);
+      box-shadow: 0 -18px 60px rgba(0,0,0,.35);
       padding: 10px 12px;
       padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
       display:flex;
@@ -196,20 +244,95 @@
       align-items:center;
       justify-content:space-between;
       min-height: var(--footer-h);
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(10px);
     }
     .footer .row{gap:8px; width:100%; justify-content:space-between}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .footer .pill{font-size:12px}
 
-    .dangerBox{
-      margin-top:10px;
-      padding:10px 12px;
-      border-radius: var(--r16);
-      border:1px solid rgba(239,68,68,.35);
-      background: rgba(239,68,68,.09);
+    /* Modal */
+    .modalBack{
+      position: fixed; inset: 0;
+      z-index: 80;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      padding: 12px;
+      padding-bottom: calc(var(--footer-h) + 12px + env(safe-area-inset-bottom, 0px));
     }
-    .dangerBox .t{font-weight:950}
-    .dangerBox .d{margin-top:6px;color:rgba(241,245,249,.9);font-size:13px}
+    .modal{
+      width: min(720px, 100%);
+      background: rgba(15,23,42,.95);
+      border:1px solid rgba(148,163,184,.20);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      backdrop-filter: blur(10px);
+    }
+    .modal h2{margin:0;font-size:18px;font-weight:1000}
+    .modal .desc{margin-top:8px;color:rgba(241,245,249,.88);line-height:1.35}
+    .modal .count{margin-top:10px}
+    .modal .btnRow{display:grid;grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px}
+
+    /* Chat */
+    .chatBox{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .chatLog{
+      border:1px solid rgba(148,163,184,.14);
+      background: rgba(15,23,42,.55);
+      border-radius: 18px;
+      padding: 10px;
+      max-height: 320px;
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chatMsg{
+      padding:8px 10px;
+      border-radius: 14px;
+      border:1px solid rgba(148,163,184,.10);
+      background: rgba(2,6,23,.35);
+      margin-bottom:8px;
+    }
+    .chatMsg .top{
+      display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;
+      margin-bottom:4px;
+    }
+    .chatMsg .who{font-weight:1000}
+    .chatMsg .when{color:var(--muted); font-size:12px; font-weight:850}
+    .chatMsg .txt{white-space:pre-wrap; line-height:1.35}
+    .chatSend{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:center;
+    }
+    textarea{
+      min-height: 44px;
+      max-height: 120px;
+      resize: vertical;
+    }
+
+    @media(max-width:860px){
+      .grid{grid-template-columns: 1fr}
+      select{min-width: 140px}
+    }
+    @media(max-width:520px){
+      body{padding:10px}
+      h1{font-size:18px}
+      .card,.hero{border-radius: 18px}
+      .pickupBox .names{font-size:18px}
+      .actions{grid-template-columns: 1fr}
+      .actions .wide{grid-column:auto}
+      select,button,input,textarea{width: 100%}
+      .seg{width: 100%}
+      .seg button{flex:1}
+      .left{min-width: unset}
+      .modal .btnRow{grid-template-columns: 1fr}
+      .chatSend{grid-template-columns: 1fr}
+    }
   </style>
 </head>
 
@@ -219,9 +342,10 @@
   <!-- Header -->
   <div class="card">
     <div class="row" style="justify-content:space-between">
-      <div class="row">
+      <div class="row" style="align-items:center">
         <span class="pill info">HvO</span>
         <h1>HvO Status</h1>
+        <span class="pill muted" id="dbPill">DB: prüfe…</span>
       </div>
 
       <div class="row">
@@ -232,23 +356,17 @@
     </div>
 
     <div class="row" style="margin-top:8px">
-      <span class="pill muted" id="dbPill">DB: prüfe…</span>
       <span class="pill muted" id="hint">Wähle oben deinen Namen.</span>
       <div class="spacer"></div>
       <span class="pill muted" id="geoPill">📍 Geo: aus</span>
       <button id="geoBtn" class="btn ghost" disabled>📍 Standort</button>
+      <span class="pill muted" id="livePill">Live</span>
     </div>
 
     <div id="dbErrorBox" class="dangerBox" style="display:none">
       <div class="t">❌ Datenbank-Fehler</div>
       <div class="d mono" id="dbErrorText">—</div>
     </div>
-
-    <!--
-      OPTIONAL (für Geo-Status):
-      ALTER TABLE public.helpers ADD COLUMN IF NOT EXISTS location_status text;
-      (ort | rand | ausserhalb)
-    -->
   </div>
 
   <!-- Dashboard -->
@@ -260,12 +378,22 @@
         <span class="pill info">🚗 Fahrer</span>
         <span class="pill" id="driverPill">—</span>
         <div class="spacer"></div>
-        <span class="pill muted" id="livePill">Live</span>
+        <span class="pill" id="incidentPill">🚨 Einsatz: —</span>
       </div>
 
       <div id="pickupBox" class="pickupBox">
-        <div class="label">👤 ABZUHOLEN (verfügbar & ohne Fahrzeug)</div>
+        <div class="label">👤 ABZUHOLEN</div>
+        <div class="muted" style="margin-top:6px">Verfügbar & ohne Fahrzeug</div>
         <div class="names" id="pickupNames">—</div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button id="startIncidentBtn" class="btn primary" disabled>🚨 Einsatz starten</button>
+        <button id="endIncidentBtn" class="btn ghost" disabled>Einsatz beenden</button>
+      </div>
+
+      <div class="muted" style="margin-top:8px">
+        „Einsatz starten“ ist nur sinnvoll für den Fahrer. Popup läuft <b>1 Minute</b>, Reset nach <b>5 Minuten</b>.
       </div>
     </div>
 
@@ -285,8 +413,8 @@
         <div class="v" id="meVehicle">—</div>
       </div>
 
-      <div class="row" style="margin-top:10px">
-        <button id="toggleAvail" class="btn green" disabled>Verfügbar</button>
+      <div class="actions">
+        <button id="toggleAvail" class="btn green wide" disabled>Verfügbar</button>
         <button id="takeVehicle" class="btn primary" disabled>Fahrzeug übernehmen</button>
         <button id="dropVehicle" class="btn red" disabled>Fahrzeug abgeben</button>
       </div>
@@ -298,7 +426,7 @@
 
   </div>
 
-  <!-- List -->
+  <!-- Team List -->
   <div class="card">
     <div class="listHead">
       <div class="row">
@@ -312,15 +440,56 @@
         <button id="fPickup">Abzuholen</button>
       </div>
     </div>
-
     <div id="list"></div>
+  </div>
+
+  <!-- Chat -->
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="row">
+        <span class="pill info">💬 Chat</span>
+        <span class="pill muted" id="chatPill">—</span>
+      </div>
+      <button id="reloadChatBtn" class="btn ghost">Aktualisieren</button>
+    </div>
+
+    <div class="chatBox" style="margin-top:10px">
+      <div id="chatLog" class="chatLog"></div>
+
+      <div class="chatSend">
+        <textarea id="chatText" placeholder="Nachricht… (Enter = senden, Shift+Enter = neue Zeile)"></textarea>
+        <button id="sendChatBtn" class="btn primary" disabled>Senden</button>
+      </div>
+
+      <div class="muted">Hinweis: Chat ist bewusst simpel (ohne Login). Keine sensiblen Daten posten.</div>
+    </div>
   </div>
 
 </div>
 
 <div id="toast" class="toast"></div>
 
-<!-- Footer -->
+<!-- Einsatz Modal -->
+<div id="incidentModalBack" class="modalBack">
+  <div class="modal">
+    <div class="row" style="justify-content:space-between">
+      <h2>🚨 Einsatz</h2>
+      <span class="pill warn" id="incidentCountdownPill">⏳ —</span>
+    </div>
+    <div class="desc" id="incidentModalDesc">—</div>
+
+    <div class="btnRow">
+      <button id="incidentAcceptBtn" class="btn green">✅ Abholen: JA</button>
+      <button id="incidentDeclineBtn" class="btn red">❌ Abholen: NEIN</button>
+    </div>
+
+    <div class="muted" style="margin-top:10px">
+      Dieses Fenster ist nur <b>1 Minute</b> aktiv. Danach wird es automatisch geschlossen.
+    </div>
+  </div>
+</div>
+
+<!-- Fixed footer -->
 <div class="footer">
   <div class="row">
     <span class="pill muted" id="placeText">📍 Ort: —</span>
@@ -332,32 +501,26 @@
 
 <script>
   /**********************
-   * 0) CONFIG
+   * CONFIG
    **********************/
   const supabaseUrl = "https://yesbojjwzobfmlggjgbx.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inllc2Jvamp3em9iZm1sZ2dqZ2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NjU3NjMsImV4cCI6MjA4NzM0MTc2M30.43MTXrmQe09fVA9sQXZuDqBZHSZ01Ts6J2SkuI4PBzw";
-
-  // Safety checks for common mistakes
-  if(!/^https?:\/\/.+/.test(supabaseUrl)){
-    alert("Supabase URL ist ungültig. Muss mit https:// starten.");
-  }
-
-  // IMPORTANT: v2 client
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInllc2Jvamp3em9iZm1sZ2dqZ2J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NjU3NjMsImV4cCI6MjA4NzM0MTc2M30.43MTXrmQe09fVA9sQXZuDqBZHSZ01Ts6J2SkuI4PBzw";
   const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
 
   /**********************
-   * 1) STORAGE
+   * STORAGE
    **********************/
   const LS_ID="hvo_me_helper_id";
   const getMeId=()=>localStorage.getItem(LS_ID)||"";
   const setMeId=(v)=>v?localStorage.setItem(LS_ID,v):localStorage.removeItem(LS_ID);
 
   /**********************
-   * 2) DOM
+   * DOM
    **********************/
   const meSelect = document.getElementById("meSelect");
   const clearMe = document.getElementById("clearMe");
   const hint = document.getElementById("hint");
+  const livePill = document.getElementById("livePill");
 
   const dbPill = document.getElementById("dbPill");
   const dbErrorBox = document.getElementById("dbErrorBox");
@@ -366,6 +529,10 @@
   const driverPill = document.getElementById("driverPill");
   const pickupBox = document.getElementById("pickupBox");
   const pickupNames = document.getElementById("pickupNames");
+
+  const incidentPill = document.getElementById("incidentPill");
+  const startIncidentBtn = document.getElementById("startIncidentBtn");
+  const endIncidentBtn = document.getElementById("endIncidentBtn");
 
   const mePill = document.getElementById("mePill");
   const meStatus = document.getElementById("meStatus");
@@ -377,13 +544,11 @@
 
   const list = document.getElementById("list");
   const countPill = document.getElementById("countPill");
-
   const fAll = document.getElementById("fAll");
   const fAvail = document.getElementById("fAvail");
   const fPickup = document.getElementById("fPickup");
 
   const toast = document.getElementById("toast");
-  const livePill = document.getElementById("livePill");
 
   const dateText = document.getElementById("dateText");
   const timeText = document.getElementById("timeText");
@@ -393,18 +558,38 @@
   const geoPill = document.getElementById("geoPill");
   const geoBtn = document.getElementById("geoBtn");
 
+  // Chat
+  const chatLog = document.getElementById("chatLog");
+  const chatText = document.getElementById("chatText");
+  const sendChatBtn = document.getElementById("sendChatBtn");
+  const reloadChatBtn = document.getElementById("reloadChatBtn");
+  const chatPill = document.getElementById("chatPill");
+
+  // Incident modal
+  const incidentModalBack = document.getElementById("incidentModalBack");
+  const incidentCountdownPill = document.getElementById("incidentCountdownPill");
+  const incidentModalDesc = document.getElementById("incidentModalDesc");
+  const incidentAcceptBtn = document.getElementById("incidentAcceptBtn");
+  const incidentDeclineBtn = document.getElementById("incidentDeclineBtn");
+
   /**********************
-   * 3) STATE
+   * STATE
    **********************/
   let current = [];
   let loading = false;
   let realtime = false;
   let filter = "all";
-  let geoTimer = null;
+
+  let incident = null; // current active incident
+  let incidentResponses = []; // responses for incident
+  let incidentCountdownTimer = null;
+  let cleanupTimer = null;
+
   let wxTimer = null;
+  let geoTimer = null;
 
   /**********************
-   * 4) UI HELPERS
+   * UI HELPERS
    **********************/
   function showToast(msg,type="ok"){
     toast.textContent = msg;
@@ -413,13 +598,11 @@
     clearTimeout(showToast._t);
     showToast._t = setTimeout(()=>toast.style.display="none", 1800);
   }
-
   function setFilterUI(v){
     fAll.classList.toggle("active", v==="all");
     fAvail.classList.toggle("active", v==="avail");
     fPickup.classList.toggle("active", v==="pickup");
   }
-
   function setDbOk(text="DB: OK"){
     dbPill.textContent = text;
     dbPill.className = "pill ok";
@@ -431,52 +614,117 @@
     dbErrorBox.style.display="block";
     dbErrorText.textContent = String(err?.message || err || "Unbekannter Fehler");
   }
+  function fmtTime(ts){
+    const d = new Date(ts);
+    return new Intl.DateTimeFormat("de-DE",{hour:"2-digit",minute:"2-digit"}).format(d);
+  }
 
   /**********************
-   * 5) DB CALLS (robust errors)
+   * DB
    **********************/
   async function dbPing(){
-    // simplest: try read a single row
     const { error } = await sb.from("helpers").select("id").limit(1);
     if(error) throw error;
   }
-
   async function fetchHelpers(){
+    const { data, error } = await sb.from("helpers").select("*").order("name",{ascending:true});
+    if(error) throw error;
+    return data||[];
+  }
+  async function updateHelper(id, patch){
+    const { error } = await sb.from("helpers").update(patch).eq("id", id);
+    if(error) throw error;
+  }
+  async function setVehicleOwner(helperId){
+    const { error: e1 } = await sb.from("helpers").update({ has_vehicle: false }).eq("has_vehicle", true);
+    if(e1) throw e1;
+    const { error: e2 } = await sb.from("helpers").update({ has_vehicle: true }).eq("id", helperId);
+    if(e2) throw e2;
+  }
+
+  // Chat
+  async function fetchMessages(){
     const { data, error } = await sb
-      .from("helpers")
+      .from("messages")
       .select("*")
-      .order("name",{ascending:true});
+      .order("created_at",{ascending:false})
+      .limit(50);
+    if(error) throw error;
+    return (data||[]).reverse();
+  }
+  async function sendMessage(helperId, helperName, text){
+    const t = (text||"").trim();
+    if(!t) return;
+    const { error } = await sb.from("messages").insert({
+      helper_id: helperId || null,
+      helper_name: helperName || null,
+      text: t.slice(0, 600)
+    });
+    if(error) throw error;
+  }
+
+  // Incidents
+  async function fetchActiveIncident(){
+    const { data, error } = await sb
+      .from("incidents")
+      .select("*")
+      .eq("active", true)
+      .order("created_at",{ascending:false})
+      .limit(1);
+    if(error) throw error;
+    return data?.[0] || null;
+  }
+
+  async function createIncident(createdById, createdByName){
+    const now = new Date();
+    const expires = new Date(now.getTime() + 60*1000);
+    const reset = new Date(now.getTime() + 5*60*1000);
+
+    const { data, error } = await sb.from("incidents").insert({
+      created_by: createdById || null,
+      created_by_name: createdByName || null,
+      active: true,
+      expires_at: expires.toISOString(),
+      reset_at: reset.toISOString()
+    }).select("*").single();
+
+    if(error) throw error;
+    return data;
+  }
+
+  async function endIncident(incidentId){
+    const { error } = await sb.from("incidents").update({ active:false }).eq("id", incidentId);
+    if(error) throw error;
+  }
+
+  async function fetchIncidentResponses(incidentId){
+    const { data, error } = await sb
+      .from("incident_responses")
+      .select("*")
+      .eq("incident_id", incidentId)
+      .order("created_at",{ascending:true});
     if(error) throw error;
     return data||[];
   }
 
-  async function updateHelper(id, patch){
-    const { error } = await sb
-      .from("helpers")
-      .update(patch)
-      .eq("id", id);
-    if(error) throw error;
-  }
-
-  async function setVehicleOwner(helperId){
-    // 2-step: first clear current owner (WHERE required), then set new
-    const { error: e1 } = await sb
-      .from("helpers")
-      .update({ has_vehicle: false })
-      .eq("has_vehicle", true);
-    if(e1) throw e1;
-
-    const { error: e2 } = await sb
-      .from("helpers")
-      .update({ has_vehicle: true })
-      .eq("id", helperId);
-    if(e2) throw e2;
+  async function respondIncident(incidentId, helperId, helperName, response){
+    const { error } = await sb.from("incident_responses").insert({
+      incident_id: incidentId,
+      helper_id: helperId,
+      helper_name: helperName || null,
+      response
+    });
+    if(error){
+      // duplicate => ignore
+      if(String(error.message||"").toLowerCase().includes("duplicate")) return;
+      throw error;
+    }
   }
 
   /**********************
-   * 6) GEO: outside => not available
+   * GEO (category only)
    **********************/
-  const KB = { lat: 48.742, lon: 10.101 }; // fallback center (used for distance only)
+  const KB = { lat: 48.742, lon: 10.101 };
   const GEO_THRESHOLDS_KM = { ort: 3, rand: 10 };
 
   function haversineKm(lat1, lon1, lat2, lon2){
@@ -519,7 +767,7 @@
   }
 
   /**********************
-   * 7) WEATHER + PLACE (client-side, independent from DB)
+   * WEATHER + PLACE
    **********************/
   function wxLabel(code){
     const map={
@@ -543,7 +791,6 @@
     if([95,96,99].includes(code)) return "⛈️";
     return "⛅";
   }
-
   async function reversePlaceName(lat, lon){
     try{
       const url =
@@ -558,11 +805,8 @@
       const state = a.state;
       if(city && state) return `${city}, ${state}`;
       return city || js?.name || null;
-    }catch{
-      return null;
-    }
+    }catch{ return null; }
   }
-
   async function loadWeatherForCoords(lat, lon){
     try{
       const url =
@@ -587,16 +831,13 @@
       const place = await reversePlaceName(lat, lon);
       placeText.textContent = place ? `📍 ${place}` : `📍 ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
     }catch(e){
-      console.error(e);
       weatherText.textContent = "⛅ Wetter nicht verfügbar";
       placeText.textContent = "📍 Ort: —";
     }
   }
-
   async function loadWeather(){
     weatherText.textContent = "⛅ Wetter lädt…";
     placeText.textContent = "📍 Ort: —";
-
     if("geolocation" in navigator){
       navigator.geolocation.getCurrentPosition(
         (pos) => loadWeatherForCoords(pos.coords.latitude, pos.coords.longitude),
@@ -607,9 +848,170 @@
       loadWeatherForCoords(KB.lat, KB.lon);
     }
   }
+  function startWeatherAuto(){
+    if(wxTimer) clearInterval(wxTimer);
+    wxTimer = setInterval(loadWeather, 15*60*1000);
+  }
 
   /**********************
-   * 8) RENDER
+   * INCIDENT UI + TIMER
+   **********************/
+  function closeIncidentModal(){
+    incidentModalBack.style.display = "none";
+    clearInterval(incidentCountdownTimer);
+    incidentCountdownTimer = null;
+  }
+
+  function openIncidentModalIfNeeded(){
+    const meId = getMeId();
+    const me = current.find(x=>x.id===meId);
+
+    // only show modal if:
+    // - incident active
+    // - not the driver (driver doesn't need to respond)
+    // - within 1-minute window
+    if(!incident || !meId || !me) return closeIncidentModal();
+
+    const driver = current.find(x=>x.has_vehicle);
+    if(driver && driver.id === meId) return closeIncidentModal();
+
+    const now = Date.now();
+    const expires = new Date(incident.expires_at).getTime();
+    if(now >= expires) return closeIncidentModal();
+
+    // show modal
+    incidentModalBack.style.display = "flex";
+    incidentModalDesc.textContent =
+      `Einsatz gestartet von ${incident.created_by_name || "Fahrer"} um ${fmtTime(incident.created_at)}. ` +
+      `Bist du bereit und möchtest du abgeholt werden?`;
+
+    // countdown
+    const tick = () => {
+      const leftMs = expires - Date.now();
+      const left = Math.max(0, Math.ceil(leftMs/1000));
+      incidentCountdownPill.textContent = `⏳ ${left}s`;
+      if(left <= 0) closeIncidentModal();
+    };
+    tick();
+    clearInterval(incidentCountdownTimer);
+    incidentCountdownTimer = setInterval(tick, 250);
+  }
+
+  function renderIncidentPill(){
+    if(!incident){
+      incidentPill.textContent = "🚨 Einsatz: —";
+      incidentPill.className = "pill";
+      endIncidentBtn.disabled = true;
+      return;
+    }
+    const expires = new Date(incident.expires_at).getTime();
+    const reset = new Date(incident.reset_at).getTime();
+    const now = Date.now();
+
+    if(now < expires){
+      incidentPill.textContent = "🚨 Einsatz: Antwortfenster offen";
+      incidentPill.className = "pill warn";
+    } else if(now < reset){
+      incidentPill.textContent = "🚨 Einsatz: läuft";
+      incidentPill.className = "pill info";
+    } else {
+      incidentPill.textContent = "🚨 Einsatz: Reset…";
+      incidentPill.className = "pill muted";
+    }
+
+    endIncidentBtn.disabled = false;
+  }
+
+  async function refreshIncident(){
+    try{
+      incident = await fetchActiveIncident();
+      if(incident){
+        incidentResponses = await fetchIncidentResponses(incident.id);
+      } else {
+        incidentResponses = [];
+      }
+      renderIncidentPill();
+      openIncidentModalIfNeeded();
+      renderDashboard(); // to update driver-only buttons
+    }catch(e){
+      // ignore if tables not present
+      console.warn("Incident fetch failed:", e);
+    }
+  }
+
+  // Auto cleanup: after 5 minutes -> incident.active=false
+  async function cleanupIfNeeded(){
+    try{
+      const act = await fetchActiveIncident();
+      if(!act) return;
+
+      const reset = new Date(act.reset_at).getTime();
+      if(Date.now() >= reset){
+        await endIncident(act.id);
+        // responses are linked with cascade on delete only; we don't delete incident record.
+        // requirement is "answers/status reset": setting active=false is enough.
+      }
+    }catch(e){
+      // ignore
+    }
+  }
+
+  function startCleanupTimer(){
+    if(cleanupTimer) clearInterval(cleanupTimer);
+    cleanupTimer = setInterval(cleanupIfNeeded, 15*1000);
+  }
+
+  /**********************
+   * CHAT UI
+   **********************/
+  function renderChat(messages){
+    chatLog.innerHTML = "";
+    if(!messages.length){
+      chatLog.innerHTML = `<div class="muted">Noch keine Nachrichten.</div>`;
+      return;
+    }
+    for(const m of messages){
+      const wrap = document.createElement("div");
+      wrap.className = "chatMsg";
+
+      const top = document.createElement("div");
+      top.className = "top";
+
+      const who = document.createElement("div");
+      who.className = "who";
+      who.textContent = m.helper_name || "Unbekannt";
+
+      const when = document.createElement("div");
+      when.className = "when";
+      when.textContent = fmtTime(m.created_at);
+
+      const txt = document.createElement("div");
+      txt.className = "txt";
+      txt.textContent = m.text;
+
+      top.appendChild(who);
+      top.appendChild(when);
+      wrap.appendChild(top);
+      wrap.appendChild(txt);
+      chatLog.appendChild(wrap);
+    }
+    // scroll to bottom
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  async function loadChat(){
+    try{
+      const msgs = await fetchMessages();
+      chatPill.textContent = `${msgs.length} msgs`;
+      renderChat(msgs);
+    } catch(e){
+      console.warn("Chat load failed:", e);
+      chatPill.textContent = "Chat: Fehler";
+    }
+  }
+
+  /**********************
+   * RENDER (helpers)
    **********************/
   function renderMeSelect(){
     const meId = getMeId();
@@ -618,11 +1020,14 @@
       current.map(h => `<option value="${h.id}" ${h.id===meId ? "selected":""}>${h.name}</option>`).join("");
 
     hint.textContent = meId ? "Änderungen sind nur bei deinem Namen aktiv." : "Wähle oben deinen Namen.";
+
     const enabled = !!meId;
-    toggleAvail.disabled = !enabled;
     takeVehicle.disabled = !enabled;
     dropVehicle.disabled = !enabled;
     geoBtn.disabled = !enabled;
+
+    // Chat
+    sendChatBtn.disabled = !enabled;
 
     meSelect.onchange = async () => {
       setMeId(meSelect.value || "");
@@ -634,8 +1039,10 @@
       }else{
         geoPillState("📍 Geo: aus", "muted");
         stopGeoAuto();
+        closeIncidentModal();
       }
       await load();
+      await refreshIncident();
     };
 
     clearMe.onclick = async () => {
@@ -644,7 +1051,9 @@
       showToast("Auswahl zurückgesetzt");
       geoPillState("📍 Geo: aus", "muted");
       stopGeoAuto();
+      closeIncidentModal();
       await load();
+      await refreshIncident();
     };
 
     geoBtn.onclick = updateGeoForMe;
@@ -659,27 +1068,26 @@
       pickupNames.textContent = "⚠️ Kein Fahrer gesetzt – bitte Fahrzeug übernehmen.";
     } else {
       const pickup = current.filter(x => x.is_available && !x.has_vehicle);
-      if(pickup.length){
-        pickupBox.classList.remove("none");
-        pickupNames.textContent = pickup.map(x => x.name).join(", ");
-      } else {
-        pickupBox.classList.add("none");
-        pickupNames.textContent = "Niemand";
-      }
+      pickupBox.classList.toggle("none", pickup.length===0);
+      pickupNames.textContent = pickup.length ? pickup.map(x => x.name).join(", ") : "Niemand";
     }
 
     const meId = getMeId();
     const me = current.find(x=>x.id===meId);
+
+    // driver-only enable for startIncident
+    const isDriver = !!(driver && meId && driver.id === meId);
+    startIncidentBtn.disabled = !isDriver;
+    endIncidentBtn.disabled = !(isDriver && incident);
 
     if(!me){
       mePill.textContent = "—";
       mePill.className = "pill muted";
       meStatus.textContent = "—";
       meVehicle.textContent = "—";
+      toggleAvail.disabled = true;
       toggleAvail.textContent = "Verfügbar";
-      toggleAvail.className = "btn green";
-      takeVehicle.style.display = "inline-block";
-      dropVehicle.style.display = "inline-block";
+      toggleAvail.className = "btn green wide";
       return;
     }
 
@@ -693,12 +1101,12 @@
       meStatus.textContent = "🔴 Nicht verfügbar (Außerhalb)";
       toggleAvail.disabled = true;
       toggleAvail.textContent = "Außerhalb";
-      toggleAvail.className = "btn red";
+      toggleAvail.className = "btn red wide";
     } else {
       meStatus.textContent = avail ? "🟢 Verfügbar" : "🔴 Nicht verfügbar";
       toggleAvail.disabled = false;
       toggleAvail.textContent = avail ? "Nicht verfügbar" : "Verfügbar";
-      toggleAvail.className = "btn " + (avail ? "red" : "green");
+      toggleAvail.className = "btn " + (avail ? "red" : "green") + " wide";
     }
 
     if(me.has_vehicle){
@@ -778,14 +1186,60 @@
   }
 
   /**********************
-   * 9) LOAD + REALTIME
+   * GEO update
+   **********************/
+  async function updateGeoForMe(){
+    const meId = getMeId();
+    if(!meId) return;
+
+    geoPillState("📍 Geo: wird ermittelt…", "muted");
+    try{
+      const pos = await getGeo();
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      await loadWeatherForCoords(lat, lon);
+
+      const km = haversineKm(lat, lon, KB.lat, KB.lon);
+      const cat = classifyLocation(km);
+
+      const kind = cat==="ort" ? "ok" : (cat==="rand" ? "warn" : "bad");
+      geoPillState(`📍 ${geoLabel(cat)} (${Math.round(km)} km)`, kind);
+
+      const patch = { location_status: cat };
+      if(cat === "ausserhalb") patch.is_available = false;
+
+      await updateHelper(meId, patch);
+
+      if(cat === "ausserhalb") showToast("Außerhalb ⇒ automatisch nicht verfügbar", "ok");
+      await load();
+    }catch(e){
+      if(e?.code === 1){
+        geoPillState("📍 Geo: blockiert", "warn");
+        showToast("Standort nicht erlaubt", "err");
+      } else {
+        geoPillState("📍 Geo: Fehler", "warn");
+        showToast(e?.message || String(e), "err");
+      }
+    }
+  }
+  function startGeoAuto(){
+    stopGeoAuto();
+    geoTimer = setInterval(updateGeoForMe, 5*60*1000);
+  }
+  function stopGeoAuto(){
+    if(geoTimer) clearInterval(geoTimer);
+    geoTimer = null;
+  }
+
+  /**********************
+   * LOAD + REALTIME
    **********************/
   async function load(){
     if(loading) return;
     loading = true;
 
     try{
-      // DB ping each time first (helps identify "DB dead" vs UI bug)
       await dbPing();
       setDbOk("DB: OK");
 
@@ -797,24 +1251,40 @@
 
       if(!realtime){
         realtime = true;
+
+        // Helpers realtime
         sb.channel("helpers-live")
           .on("postgres_changes",{event:"*",schema:"public",table:"helpers"}, async () => {
             livePill.textContent = "Live · Update";
             clearTimeout(livePill._t);
             livePill._t = setTimeout(()=>livePill.textContent="Live", 800);
             await load();
+            await refreshIncident();
+          })
+          .subscribe();
+
+        // Chat realtime
+        sb.channel("chat-live")
+          .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"}, async () => {
+            await loadChat();
+          })
+          .subscribe();
+
+        // Incidents realtime
+        sb.channel("incidents-live")
+          .on("postgres_changes",{event:"*",schema:"public",table:"incidents"}, async () => {
+            await refreshIncident();
+          })
+          .on("postgres_changes",{event:"*",schema:"public",table:"incident_responses"}, async () => {
+            await refreshIncident();
           })
           .subscribe();
       }
     }catch(e){
-      console.error("DB error:", e);
       setDbBad(e);
-
-      // Still render UI with cached/current state if available
       renderMeSelect();
       renderDashboard();
       renderList();
-
       showToast(e?.message || String(e), "err");
     }finally{
       loading = false;
@@ -822,7 +1292,7 @@
   }
 
   /**********************
-   * 10) ACTIONS
+   * ACTIONS: Status & Vehicle
    **********************/
   toggleAvail.onclick = async () => {
     const meId = getMeId();
@@ -841,10 +1311,9 @@
       showToast("Status gespeichert ✅");
       await load();
     }catch(e){
-      console.error(e);
       showToast(e?.message || String(e), "err");
     }finally{
-      toggleAvail.disabled = false;
+      await load();
     }
   };
 
@@ -856,8 +1325,8 @@
       await setVehicleOwner(meId);
       showToast("Fahrzeug übernommen ✅");
       await load();
+      await refreshIncident();
     }catch(e){
-      console.error(e);
       showToast(e?.message || String(e), "err");
     }finally{
       takeVehicle.disabled = false;
@@ -872,8 +1341,8 @@
       await updateHelper(meId, { has_vehicle: false });
       showToast("Fahrzeug abgegeben ✅");
       await load();
+      await refreshIncident();
     }catch(e){
-      console.error(e);
       showToast(e?.message || String(e), "err");
     }finally{
       dropVehicle.disabled = false;
@@ -885,57 +1354,146 @@
   fPickup.onclick = ()=>{ filter="pickup"; setFilterUI("pickup"); renderList(); };
 
   /**********************
-   * 11) GEO UPDATE (writes to DB)
+   * ACTIONS: Incident
    **********************/
-  async function updateGeoForMe(){
+  startIncidentBtn.onclick = async () => {
     const meId = getMeId();
-    if(!meId) return;
-
-    geoPillState("📍 Geo: wird ermittelt…", "muted");
-    try{
-      const pos = await getGeo();
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
-
-      // also update footer weather/place
-      await loadWeatherForCoords(lat, lon);
-
-      const km = haversineKm(lat, lon, KB.lat, KB.lon);
-      const cat = classifyLocation(km);
-
-      const kind = cat==="ort" ? "ok" : (cat==="rand" ? "warn" : "bad");
-      geoPillState(`📍 ${geoLabel(cat)} (${Math.round(km)} km)`, kind);
-
-      const patch = { location_status: cat };
-      if(cat === "ausserhalb") patch.is_available = false;
-
-      await updateHelper(meId, patch);
-
-      if(cat === "ausserhalb") showToast("Außerhalb ⇒ automatisch nicht verfügbar", "ok");
-      await load();
-    }catch(e){
-      console.error(e);
-      if(e?.code === 1){
-        geoPillState("📍 Geo: blockiert", "warn");
-        showToast("Standort nicht erlaubt", "err");
-      } else {
-        geoPillState("📍 Geo: Fehler", "warn");
-        showToast(e?.message || String(e), "err");
-      }
+    const me = current.find(x=>x.id===meId);
+    const driver = current.find(x=>x.has_vehicle);
+    if(!meId || !me || !driver || driver.id !== meId){
+      showToast("Nur der Fahrer sollte den Einsatz starten.", "err");
+      return;
     }
-  }
 
-  function startGeoAuto(){
-    stopGeoAuto();
-    geoTimer = setInterval(updateGeoForMe, 5 * 60 * 1000);
-  }
-  function stopGeoAuto(){
-    if(geoTimer) clearInterval(geoTimer);
-    geoTimer = null;
-  }
+    // If an incident already active, don't stack
+    await refreshIncident();
+    if(incident){
+      showToast("Es läuft bereits ein Einsatz.", "err");
+      return;
+    }
+
+    startIncidentBtn.disabled = true;
+    try{
+      incident = await createIncident(meId, me.name);
+      showToast("Einsatz gestartet ✅");
+      await refreshIncident();
+    }catch(e){
+      showToast(e?.message || String(e), "err");
+    }finally{
+      startIncidentBtn.disabled = false;
+    }
+  };
+
+  endIncidentBtn.onclick = async () => {
+    if(!incident) return;
+    const meId = getMeId();
+    const driver = current.find(x=>x.has_vehicle);
+    if(!driver || driver.id !== meId){
+      showToast("Nur der Fahrer kann beenden.", "err");
+      return;
+    }
+    endIncidentBtn.disabled = true;
+    try{
+      await endIncident(incident.id);
+      showToast("Einsatz beendet");
+      await refreshIncident();
+      closeIncidentModal();
+    }catch(e){
+      showToast(e?.message || String(e), "err");
+    }finally{
+      endIncidentBtn.disabled = false;
+    }
+  };
+
+  incidentAcceptBtn.onclick = async () => {
+    const meId = getMeId();
+    const me = current.find(x=>x.id===meId);
+    if(!incident || !meId || !me) return;
+    const expires = new Date(incident.expires_at).getTime();
+    if(Date.now() >= expires){
+      closeIncidentModal();
+      return;
+    }
+    incidentAcceptBtn.disabled = true;
+    incidentDeclineBtn.disabled = true;
+    try{
+      await respondIncident(incident.id, meId, me.name, "accept");
+      showToast("Zusage gespeichert ✅");
+      closeIncidentModal();
+      await refreshIncident();
+    }catch(e){
+      showToast(e?.message || String(e), "err");
+    }finally{
+      incidentAcceptBtn.disabled = false;
+      incidentDeclineBtn.disabled = false;
+    }
+  };
+
+  incidentDeclineBtn.onclick = async () => {
+    const meId = getMeId();
+    const me = current.find(x=>x.id===meId);
+    if(!incident || !meId || !me) return;
+    const expires = new Date(incident.expires_at).getTime();
+    if(Date.now() >= expires){
+      closeIncidentModal();
+      return;
+    }
+    incidentAcceptBtn.disabled = true;
+    incidentDeclineBtn.disabled = true;
+    try{
+      await respondIncident(incident.id, meId, me.name, "decline");
+      showToast("Ablehnung gespeichert ✅");
+      closeIncidentModal();
+      await refreshIncident();
+    }catch(e){
+      showToast(e?.message || String(e), "err");
+    }finally{
+      incidentAcceptBtn.disabled = false;
+      incidentDeclineBtn.disabled = false;
+    }
+  };
+
+  // click outside modal closes (optional)
+  incidentModalBack.addEventListener("click", (e) => {
+    if(e.target === incidentModalBack) closeIncidentModal();
+  });
 
   /**********************
-   * 12) CLOCK
+   * ACTIONS: Chat
+   **********************/
+  reloadChatBtn.onclick = loadChat;
+
+  sendChatBtn.onclick = async () => {
+    const meId = getMeId();
+    const me = current.find(x=>x.id===meId);
+    if(!meId || !me){
+      showToast("Bitte zuerst Namen auswählen.", "err");
+      return;
+    }
+    const text = chatText.value;
+    chatText.value = "";
+    sendChatBtn.disabled = true;
+    try{
+      await sendMessage(meId, me.name, text);
+      await loadChat();
+    }catch(e){
+      showToast(e?.message || String(e), "err");
+      chatText.value = text;
+    }finally{
+      sendChatBtn.disabled = false;
+    }
+  };
+
+  // Enter to send, Shift+Enter new line
+  chatText.addEventListener("keydown", (e) => {
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      if(!sendChatBtn.disabled) sendChatBtn.click();
+    }
+  });
+
+  /**********************
+   * CLOCK
    **********************/
   function updateClock(){
     const now = new Date();
@@ -943,39 +1501,36 @@
       timeZone:"Europe/Berlin", weekday:"short", year:"numeric", month:"2-digit", day:"2-digit"
     }).format(now);
     timeText.textContent = new Intl.DateTimeFormat("de-DE",{
-      timeZone:"Europe/Berlin", hour:"2-digit", minute:"2-digit", second:"2-digit"
+      timeZone:"Europe/Berlin", hour:"2-digit", minute:"2-digit"
     }).format(now);
   }
 
-  function startWeatherAuto(){
-    if(wxTimer) clearInterval(wxTimer);
-    wxTimer = setInterval(loadWeather, 15 * 60 * 1000);
-  }
-
   /**********************
-   * 13) BOOT
+   * BOOT
    **********************/
   setFilterUI("all");
-  updateClock(); setInterval(updateClock, 1000);
+  updateClock(); setInterval(updateClock, 20*1000);
 
-  // initial weather (will use geo if allowed, else fallback)
   loadWeather();
   startWeatherAuto();
 
   geoPillState("📍 Geo: aus", "muted");
 
-  // enable geo button only if user selected
-  geoBtn.onclick = updateGeoForMe;
+  // timers
+  startCleanupTimer();
 
-  // Initial load
-  load().then(() => {
+  (async () => {
+    await load();
+    await loadChat();
+    await refreshIncident();
+
     if(getMeId()){
       geoPillState("📍 Geo: bereit", "muted");
       geoBtn.disabled = false;
       updateGeoForMe();
       startGeoAuto();
     }
-  });
+  })();
 </script>
 </body>
 </html>
